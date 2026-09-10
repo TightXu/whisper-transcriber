@@ -1,0 +1,15 @@
+# Local environment, models, and caches (not part of the repo)
+.venv/
+models/
+cache/
+transcripts/
+whisper.7z
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Logs / OS cruft
+*.log
+Thumbs.db
+.DS_Store

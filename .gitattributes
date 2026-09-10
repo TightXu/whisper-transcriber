@@ -1,0 +1,3 @@
+# Keep Windows batch files exactly as-is (CRLF) in the repository: cmd.exe
+# can fail to resolve labels/goto targets in LF-only .bat files.
+*.bat -text
