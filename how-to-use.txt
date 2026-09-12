@@ -1,0 +1,31 @@
+HOW TO USE / 怎么用
+
+这个工具做什么
+  把音频或视频文件转成纯文本 .txt。双击就能用：不需要 AI 背景，不需要敲命令，常见格式直接拖进去，不用自己转格式。
+
+怎么用
+  1. 解压整个文件夹，放哪儿都行（桌面最简单）。
+  2. 双击 whisper_transcribe.bat。
+  3. 第一次运行要准备环境并下载语音模型（2–3GB，只有第一次慢，窗口里会显示进度）；之后启动只要几秒。
+  4. 黑窗口出现后，把音频/视频文件拖进去（或粘贴路径），回车。
+  5. 转写结果是跟源文件同目录、同名的 .txt。可以接着拖下一个文件，模型不会重新加载。
+  /x 退出；/s 换用哪套硬件方案（显卡 / NPU / 核显 / 纯 CPU）。
+
+Windows 不让运行怎么办
+  从网上下载的文件，Windows 会拦一道。按顺序试，第 1 条通常就够了：
+  1. 从命令提示符启动 —— 不触发拦截，而且用你的普通权限运行，最干净：
+     在文件夹的地址栏里输入 cmd 回车，再输入 whisper_transcribe.bat 回车。
+  2. 双击时如果弹出"无法识别的应用"，点 更多信息 (More info) → 仍要运行 (Run anyway)。
+  3. 如果弹窗里没有"仍要运行"（较新的 Windows 11 开了智能应用控制 Smart App Control）：
+     右键 whisper_transcribe.bat → 以管理员身份运行。
+  附：这个"来自网络"标记只有 Windows 11 自带的解压会给文件带上。用 7-Zip、WinRAR、WPS 解压都不会带，也就不会出现上面的拦截。
+
+
+English
+  What it does: turns an audio or video file into a plain .txt transcript. Double-click to run — no AI background, no command line, no format conversion.
+  How to run: unzip the folder anywhere -> double-click whisper_transcribe.bat -> the first run prepares everything and downloads the speech model (2-3 GB, one time) -> drag an audio/video file into the black window and press Enter. The transcript is saved next to the source file under the same name, and the model stays loaded for the next file. /x quits, /s switches which hardware does the work.
+  If Windows blocks it (files from the internet are held back once), try in this order — the first one usually works:
+  1. Start it from a command prompt: type cmd in the Explorer address bar, press Enter, then type whisper_transcribe.bat and press Enter. Nothing is blocked, and it runs with your normal permissions.
+  2. When double-clicking, if a warning appears, pick More info -> Run anyway.
+  3. If the warning offers no such option (newer Windows 11 with Smart App Control), right-click whisper_transcribe.bat -> Run as administrator.
+  Note: only Windows 11's built-in unzip stamps files as "downloaded from the internet". 7-Zip, WinRAR and WPS do not, so the block above never appears.
