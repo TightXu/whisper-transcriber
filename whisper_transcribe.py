@@ -131,11 +131,10 @@ _TR = {
         "[setup] Using index: %s",
     "[setup] 源 %s 失败，换下一个源重试 ...":
         "[setup] Index %s failed, trying the next one ...",
-    "[setup] 检测到 .venv 来自其它机器（或环境已变化），尝试认领...":
-        "[setup] .venv is from another machine (or the environment "
-        "changed), trying to claim it ...",
-    "[setup] 认领成功（已指向本机 Python）。":
-        "[setup] Claimed (pyvenv.cfg now points to a local Python).",
+    "[setup] .venv 来自其它机器，尝试认领 ...":
+        "[setup] .venv is from another machine, trying to claim it ...",
+    "[setup] 认领成功。":
+        "[setup] Claimed.",
     "[setup] 本机无匹配的同版本 Python，重建 .venv ...":
         "[setup] No matching local Python of the same version, "
         "rebuilding .venv ...",
@@ -160,9 +159,8 @@ _TR = {
         "[setup] Checking dependencies for the {} runtime ...",
     "[setup] 依赖正常，无需修复。":
         "[setup] Dependencies are fine, nothing to fix.",
-    "[setup] 重装依赖（faster-whisper / ctranslate2 / openvino / openvino-genai）...":
-        "[setup] Reinstalling dependencies (faster-whisper / ctranslate2 "
-        "/ openvino / openvino-genai) ...",
+    "[setup] 重装依赖 ...":
+        "[setup] Reinstalling dependencies ...",
     "[ERROR] 依赖修复失败，请检查网络后重试。":
         "[ERROR] Dependency fix failed. Check your network and retry.",
     "[setup] 依赖修复完成。":
@@ -178,19 +176,15 @@ _TR = {
     # ---- 模型下载 ----
     "[setup] 使用 HF 端点: %s":
         "[setup] Using HF endpoint: %s",
-    "[setup] 下载 %s -> models/%s （large-v3，约 1.6~3GB，请耐心等待）...":
-        "[setup] Downloading %s -> models/%s (large-v3, ~1.6-3GB, "
-        "please wait) ...",
+    "[setup] 下载 %s -> models/%s（约 1.6~3GB）...":
+        "[setup] Downloading %s -> models/%s (~1.6-3GB) ...",
     "[ERROR] 模型下载失败。":
         "[ERROR] Model download failed.",
     "[setup] 下载完成。":
         "[setup] Download complete.",
     # ---- CUDA 运行库 ----
-    "[setup] 已将 %d 个 CUDA DLL 归位到 ctranslate2 包目录。":
-        "[setup] Moved %d CUDA DLLs into the ctranslate2 package dir.",
-    "[setup] 安装 CUDA 12 运行库（cublas + cudnn，约 1.3GB）...":
-        "[setup] Installing CUDA 12 runtime libs (cublas + cudnn, "
-        "~1.3GB) ...",
+    "[setup] 安装 CUDA 12 运行库（约 1.3GB）...":
+        "[setup] Installing CUDA 12 runtime libs (~1.3GB) ...",
     "[setup] 运行库自动安装失败。手动方案：把 cudart64_12/cublas64_12/cublasLt64_12/cudnn64_9 四个 DLL 拷进 venv 的 site-packages\\ctranslate2\\。":
         "[setup] Automatic runtime-lib install failed. Manual fix: copy "
         "the four DLLs cudart64_12/cublas64_12/cublasLt64_12/cudnn64_9 "
@@ -198,11 +192,10 @@ _TR = {
     "[setup] 安装完成但未检测到运行库，cuda 将退回 CPU。":
         "[setup] Install finished but libs not detected; cuda falls "
         "back to CPU.",
-    "[setup] CUDA 运行库就绪（cublas/cudnn）。":
-        "[setup] CUDA runtime libs ready (cublas/cudnn).",
-    "CUDA 12 运行库缺失（选中后自动 pip 安装，约 1.3GB）":
-        "CUDA 12 runtime libs missing (auto pip-install on selection, "
-        "~1.3GB)",
+    "[setup] CUDA 运行库就绪。":
+        "[setup] CUDA runtime libs ready.",
+    "CUDA 12 运行库缺失（选中后自动安装，约 1.3GB）":
+        "CUDA 12 runtime libs missing (installed automatically, ~1.3GB)",
     # ---- runtime 菜单 / 就绪度 ----
     "未检测到 NVIDIA 显卡":
         "No NVIDIA GPU detected",
@@ -210,8 +203,8 @@ _TR = {
         "No NPU detected",
     "未检测到 Intel 核显":
         "No Intel iGPU detected",
-    "首次需编译（约 5-30 分钟，之后秒级）":
-        "First use needs kernel compile (~5-30 min, seconds afterwards)",
+    "首次需编译（约 5-30 分钟）":
+        "First use needs kernel compile (~5-30 min)",
     "预编译缓存已就绪":
         "Precompiled cache ready",
     "需下载模型(%.1fGB)":
@@ -240,22 +233,18 @@ _TR = {
     "未更改。":
         "No change.",
     # ---- 首次配置 / 状态 ----
-    "[setup] 硬件探测: N卡=%s CUDA库=%s IntelNPU=%s Intel核显=%s":
-        "[setup] Hardware probe: NVIDIA=%s CUDA libs=%s Intel NPU=%s "
-        "Intel iGPU=%s",
-    "[setup] 检测到 NVIDIA 显卡但缺 CUDA 12 运行库，选择 CUDA 方案时会自动 pip 安装。":
+    "[setup] 检测到 NVIDIA 显卡但缺 CUDA 12 运行库，选择 CUDA 方案时会自动安装。":
         "[setup] NVIDIA GPU found but CUDA 12 runtime libs missing; "
-        "choosing CUDA auto-installs them via pip.",
-    "（非交互环境或已取消）默认使用推荐方案...":
-        "(Non-interactive or cancelled) using the recommended option ...",
-    "[setup] 完成。当前 runtime: %s（配置已写入 .venv/runtimes.json）":
-        "[setup] Done. Current runtime: %s (config written to "
-        ".venv/runtimes.json)",
+        "choosing CUDA auto-installs them.",
+    "默认使用推荐方案 ...":
+        "Using the recommended option ...",
+    "[setup] 完成。当前 runtime: %s":
+        "[setup] Done. Current runtime: %s",
     "        以后双击 bat 直接粘贴文件即可；/s 可随时调整 runtime。":
         "        From now on: double-click the bat and paste a file; "
         "/s switches runtime anytime.",
-    "[setup] Runtime 已设为 %s（写入 .venv/runtimes.json）":
-        "[setup] Runtime set to %s (written to .venv/runtimes.json)",
+    "[setup] Runtime 已设为 %s":
+        "[setup] Runtime set to %s",
     "[setup] 检测到配置来自其它机器，重新进入配置...":
         "[setup] Config is from another machine, re-running first-time "
         "setup ...",
@@ -268,20 +257,18 @@ _TR = {
         "Output: %s",
     "[提示] 源目录不可写入(%s)，已改存到: %s":
         "[hint] Source dir not writable (%s), saved to: %s",
-    "加载模型 ct2/large-v3 ...":
-        "Loading model ct2/large-v3 ...",
-    "加载模型 ov/large-v3 (int8) 设备 %s ...":
-        "Loading model ov/large-v3 (int8) on %s ...",
+    "加载模型 ...":
+        "Loading model ...",
+    "加载模型（%s, int8）...":
+        "Loading model (int8 on %s) ...",
     "模型加载 %.1fs":
         "Model loaded in %.1fs",
-    "模型已加载，直接复用。":
-        "Model already loaded; reusing.",
-    "解码完成, 时长 %.1f 秒":
-        "Decoded, duration %.1fs",
-    "转写中（自动识别语言）... 实时输出：":
-        "Transcribing (auto language detect) ... live output:",
-    "转写中（%s, 自动识别语言）...":
-        "Transcribing (%s, auto language detect) ...",
+    "音频时长 %.1f 秒":
+        "Audio duration: %.1fs",
+    "转写中 ... 实时输出：":
+        "Transcribing ... live output:",
+    "转写中（%s）...":
+        "Transcribing on %s ...",
     "转写完成，共 %d 段":
         "Transcription done, %d segments",
     "识别语言: %s (置信度 %.3f)":
@@ -290,14 +277,13 @@ _TR = {
         "Transcribed in %.1fs",
     "转写完成":
         "Transcription done",
-    "（首次使用需编译内核，约 5-30 分钟；结果缓存在 cache/npu/，之后秒级加载）":
-        "(First use compiles kernels, ~5-30 min; result cached in "
-        "cache/npu/, near-instant load afterwards)",
+    "（首次使用需编译内核，约 5-30 分钟；之后秒级加载）":
+        "(First use compiles kernels, ~5-30 min; near-instant afterwards)",
     "（首次使用需编译内核，几十秒；结果会缓存）":
         "(First use compiles kernels, tens of seconds; result will "
         "be cached)",
-    "文本已保存（无时间戳、单行）: %s":
-        "Saved (no timestamps, single line): %s",
+    "文本已保存: %s":
+        "Saved: %s",
     # ---- 交互主循环 ----
     "  粘贴音频/视频文件（支持拖拽）→ 转写":
         "  Paste an audio/video file (drag & drop) -> transcribe",
@@ -630,9 +616,9 @@ def ensure_venv():
             # venv 带着别机的指纹（整目录拷来），或 base Python 已
             # 失效（卸载/移动）：认领（重指本机同版本 Python），
             # 失败才重建。
-            print(tr("[setup] 检测到 .venv 来自其它机器（或环境已变化），尝试认领..."))
+            print(tr("[setup] .venv 来自其它机器，尝试认领 ..."))
             if _fix_venv_base():
-                print(tr("[setup] 认领成功（已指向本机 Python）。"))
+                print(tr("[setup] 认领成功。"))
             else:
                 print(tr("[setup] 本机无匹配的同版本 Python，重建 .venv ..."))
                 _create_venv(force=True)
@@ -702,7 +688,7 @@ def download_model(kind):
         repo, dst = "Systran/faster-whisper-large-v3", CT2_DIR
     else:
         repo, dst = "OpenVINO/whisper-large-v3-int8-ov", OV_DIR
-    print(tr("[setup] 下载 %s -> models/%s （large-v3，约 1.6~3GB，请耐心等待）...")
+    print(tr("[setup] 下载 %s -> models/%s（约 1.6~3GB）...")
           % (repo, os.path.basename(dst)))
     code = ("from huggingface_hub import snapshot_download;"
             "snapshot_download(%r, local_dir=%r)" % (repo, dst))
@@ -752,29 +738,28 @@ def _relocate_nvidia_dlls():
                 except Exception:
                     pass
     if moved:
-        print(tr("[setup] 已将 %d 个 CUDA DLL 归位到 ctranslate2 包目录。") % moved)
-    # 归位后必须立刻把 DLL 预加载进本进程：ctranslate2 多半在本函数之前
-    # 就被 import 过（probe 探测时），其 __init__ 里"CDLL 包目录下全部
-    # DLL"的预加载循环已在归位前跑完，不会再跑；不补载则本进程内首次
-    # CUDA 转写报 "cublas64_12.dll is not found" 而退回 CPU，重启才恢复。
-    # 这里按 CT2 __init__ 的同款方式补载（add_dll_directory + 逐个 CDLL）。
-    import ctypes
-    try:
-        os.add_dll_directory(dst)
-    except Exception:
-        pass
-    for dll in glob.glob(os.path.join(dst, "*.dll")):
+        # 归位后必须立刻把 DLL 预加载进本进程：ctranslate2 多半在本函数之前
+        # 就被 import 过（probe 探测时），其 __init__ 里"CDLL 包目录下全部
+        # DLL"的预加载循环已在归位前跑完，不会再跑；不补载则本进程内首次
+        # CUDA 转写报 "cublas64_12.dll is not found" 而退回 CPU，重启才恢复。
+        # 这里按 CT2 __init__ 的同款方式补载（add_dll_directory + 逐个 CDLL）。
+        import ctypes
         try:
-            ctypes.CDLL(dll)
-        except OSError:
+            os.add_dll_directory(dst)
+        except Exception:
             pass
+        for dll in glob.glob(os.path.join(dst, "*.dll")):
+            try:
+                ctypes.CDLL(dll)
+            except OSError:
+                pass
 
 
 def ensure_cuda_libs():
     """确保 cublas/cudnn 运行库可用（缺则 pip 装并归位），返回是否就绪。"""
     if probe()["cuda_libs"]:
         return True
-    print(tr("[setup] 安装 CUDA 12 运行库（cublas + cudnn，约 1.3GB）..."))
+    print(tr("[setup] 安装 CUDA 12 运行库（约 1.3GB）..."))
     if _pip_install_into(VENV_PY, *CUDA_RUNTIME_PKGS) != 0:
         print(tr("[setup] 运行库自动安装失败。"
                 "手动方案：把 cudart64_12/cublas64_12/cublasLt64_12/"
@@ -785,7 +770,7 @@ def ensure_cuda_libs():
     if not probe(refresh=True)["cuda_libs"]:
         print(tr("[setup] 安装完成但未检测到运行库，cuda 将退回 CPU。"))
         return False
-    print(tr("[setup] CUDA 运行库就绪（cublas/cudnn）。"))
+    print(tr("[setup] CUDA 运行库就绪。"))
     return True
 
 
@@ -807,12 +792,12 @@ def runtime_ready(rt, p=None):
             # 重建缓存，不会出错，只是慢一次。
             need_compile = not glob.glob(
                 os.path.join(OV_CACHE_DIR["NPU"], "*.blob"))
-            note = (tr("首次需编译（约 5-30 分钟，之后秒级）")
+            note = (tr("首次需编译（约 5-30 分钟）")
                     if need_compile else tr("预编译缓存已就绪"))
         else:  # igpu：GPU 内核编译秒级~十几秒，无需提示编译
             need_compile = False
     if rt == "cuda" and p["nvidia"] and not p["cuda_libs"]:
-        note = tr("CUDA 12 运行库缺失（选中后自动 pip 安装，约 1.3GB）")
+        note = tr("CUDA 12 运行库缺失（选中后自动安装，约 1.3GB）")
     ok = have_model
     return (ok, need_compile, note)
 
@@ -908,7 +893,7 @@ def _rt_action(rt, have_model, need_compile, note):
         acts.append(tr("需下载模型(%.1fGB)") % (2.9 if RUNTIME_MODEL[rt] == "ct2"
                                               else 1.6))
     if need_compile:
-        acts.append(tr("首次需编译（约 5-30 分钟，之后秒级）"))
+        acts.append(tr("首次需编译（约 5-30 分钟）"))
     if note:
         acts.append(note)
     if not acts:
@@ -935,11 +920,9 @@ def first_run_setup(state):
     p = probe()
     rec = best_runtime(p)
     have = models_present()
-    print(tr("[setup] 硬件探测: N卡=%s CUDA库=%s IntelNPU=%s Intel核显=%s")
-          % (p["nvidia"], p["cuda_libs"], p["npu"], p["igpu"]))
     if p["nvidia"] and not p["cuda_libs"]:
         print(tr("[setup] 检测到 NVIDIA 显卡但缺 CUDA 12 运行库，"
-                "选择 CUDA 方案时会自动 pip 安装。"))
+                "选择 CUDA 方案时会自动安装。"))
     print("")
 
     order = [rec] + [r for r in PRIORITY if r != rec]  # 推荐项排最前
@@ -948,7 +931,7 @@ def first_run_setup(state):
     idx = _arrow_menu(items, tr("首次使用 - 选择方案（速度优先级: "
                                "cuda > npu > igpu > cpu）"))
     if idx is None:
-        print(tr("（非交互环境或已取消）默认使用推荐方案..."))
+        print(tr("默认使用推荐方案 ..."))
         idx = 0
     rt = rts[idx]
 
@@ -959,7 +942,7 @@ def first_run_setup(state):
     state.update({"models": have, "runtime": rt, "first_run_done": True})
     save_state(state)
     print("")
-    print(tr("[setup] 完成。当前 runtime: %s（配置已写入 .venv/runtimes.json）") % rt)
+    print(tr("[setup] 完成。当前 runtime: %s") % rt)
     print(tr("        以后双击 bat 直接粘贴文件即可；/s 可随时调整 runtime。"))
     return 0
 
@@ -986,7 +969,7 @@ def runtime_menu(state):
     state.update({"models": have, "runtime": rt})
     save_state(state)
     _MODELS.clear()   # 切换 runtime：旧实例的显存/内存随引用释放
-    print(tr("[setup] Runtime 已设为 %s（写入 .venv/runtimes.json）") % rt)
+    print(tr("[setup] Runtime 已设为 %s") % rt)
     return 0
 
 
@@ -1018,19 +1001,17 @@ def _run_ct2(device, ctype, path):
     from faster_whisper import WhisperModel
     model = _MODELS.get(("ct2", device, ctype))
     if model is None:
-        print(tr("加载模型 ct2/large-v3 ..."))
+        print(tr("加载模型 ..."))
         t0 = time.time()
         model = WhisperModel(CT2_DIR, device=device, compute_type=ctype)
         _MODELS[("ct2", device, ctype)] = model
         print(tr("模型加载 %.1fs") % (time.time() - t0))
-    else:
-        print(tr("模型已加载，直接复用。"))
 
     from faster_whisper.audio import decode_audio
     audio = decode_audio(path, sampling_rate=16000)
-    print(tr("解码完成, 时长 %.1f 秒") % (audio.shape[0] / 16000.0))
+    print(tr("音频时长 %.1f 秒") % (audio.shape[0] / 16000.0))
 
-    print(tr("转写中（自动识别语言）... 实时输出："))
+    print(tr("转写中 ... 实时输出："))
     t0 = time.time()
     segments, info = model.transcribe(audio, language=None, **CT2_DECODE)
     texts = []
@@ -1057,25 +1038,22 @@ def _run_ov(ov_device, path):
         if ov_device == "NPU":
             # 实测 int8 本地编译（约 5 分钟）通常快于下载 4.3GB，
             # 故不做网络下载，直接本地编译。
-            print(tr("（首次使用需编译内核，约 5-30 分钟；"
-                     "结果缓存在 cache/npu/，之后秒级加载）"))
+            print(tr("（首次使用需编译内核，约 5-30 分钟；之后秒级加载）"))
         else:
             print(tr("（首次使用需编译内核，几十秒；结果会缓存）"))
     pipe = _MODELS.get(("ov", ov_device))
     if pipe is None:
-        print(tr("加载模型 ov/large-v3 (int8) 设备 %s ...") % ov_device)
+        print(tr("加载模型（%s, int8）...") % ov_device)
         t0 = time.time()
         pipe = openvino_genai.WhisperPipeline(
             OV_DIR, device=ov_device, config={"CACHE_DIR": cache_dir})
         _MODELS[("ov", ov_device)] = pipe
         print(tr("模型加载 %.1fs") % (time.time() - t0))
-    else:
-        print(tr("模型已加载，直接复用。"))
 
     audio = decode_audio(path, sampling_rate=16000)
-    print(tr("解码完成, 时长 %.1f 秒") % (audio.shape[0] / 16000.0))
+    print(tr("音频时长 %.1f 秒") % (audio.shape[0] / 16000.0))
 
-    print(tr("转写中（%s, 自动识别语言）...") % ov_device)
+    print(tr("转写中（%s）...") % ov_device)
     t0 = time.time()
     # 注：openvino_genai 2026.3.1 传 WhisperGenerationConfig 对象会抛
     # "ValueError: vector too long"（绑定层问题，位置/关键字传法都炸），
@@ -1133,7 +1111,7 @@ def transcribe(path):
                 return 1
 
     out_real = _write_text_robust(path, out_txt, text)
-    print(tr("文本已保存（无时间戳、单行）: %s") % out_real)
+    print(tr("文本已保存: %s") % out_real)
     return 0
 
 
@@ -1171,8 +1149,7 @@ def fix_deps():
     if _import_ok(_imports_for(rt)):
         print(tr("[setup] 依赖正常，无需修复。"))
         return 0
-    print(tr("[setup] 重装依赖（faster-whisper / ctranslate2 / openvino / "
-            "openvino-genai）..."))
+    print(tr("[setup] 重装依赖 ..."))
     if _pip_install_into(VENV_PY, *DEP_PKGS, reinstall=True) != 0:
         print(tr("[ERROR] 依赖修复失败，请检查网络后重试。"))
         return 1

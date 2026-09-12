@@ -27,7 +27,10 @@ At the prompt: `/s` switches runtime, `/fix` repairs dependencies, `/x` exits.
 The quick start above skips a few details that are useful the first time. Here is the whole flow, in order:
 
 1. **Get the files.** On this page: green **Code** button → **Download ZIP**, then unzip it (right-click the ZIP → *Extract All…*) and put the folder wherever you like — the Desktop is fine. Nothing needs to be installed beforehand.
-2. **Start it.** Open the folder and double-click `whisper_transcribe.bat` — the only file you need to touch. If Windows shows a security warning about an unrecognized app (that's what it says about programs downloaded from the internet), choose **More info → Run anyway** to continue.
+2. **Start it.** Open the folder and double-click `whisper_transcribe.bat` — the only file you need to touch. Windows may stop it first, because the file came from the internet. Three ways past that, in the order they are worth trying:
+   - Open a command prompt in the folder: type `cmd` in the Explorer address bar (the bar showing the folder path), press Enter, then type `whisper_transcribe.bat` and press Enter. Starting it from a prompt does not go through Windows' download check, and it runs with your normal permissions.
+   - Double-click it and, if a warning about an unrecognized app appears, choose **More info → Run anyway**.
+   - If the warning offers no way forward (newer Windows 11 builds with Smart App Control enabled), right-click `whisper_transcribe.bat` and choose **Run as administrator**.
 3. **Let it set itself up (first time only).** A black window opens and explains what it is doing. Depending on your PC it may ask one or two things:
    - *Install Python automatically?* — if it asks, press Enter (yes). That's the background program the tool runs on, and it is a normal user-level install.
    - *Which "runtime" to use?* — this only decides what hardware does the listening. If you have no preference, press Enter to take the option tagged `[Recommended]`.
