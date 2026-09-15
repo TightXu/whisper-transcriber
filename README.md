@@ -39,6 +39,25 @@ The quick start above skips a few details that are useful the first time. Here i
 5. **Take the text.** The transcript is saved next to your original file, with the same name and a `.txt` extension, and the window tells you the exact path. The text also appears on screen as it works.
 6. **Another file, or done.** Paste another path to keep going; type `/x` and press Enter to finish (closing the window works too). Two more commands exist for later, but you won't need them: `/s` switches runtime, `/fix` repairs the setup if anything ever breaks.
 
+## Folder layout
+
+A folder that has been started at least once:
+
+```
+whisper-transcriber/
+├── whisper_transcribe.bat     the launcher — double-click this one
+├── whisper_transcribe.py      everything else lives in here
+├── how-to-use.txt
+├── .venv/                     created on the first run: the Python environment
+├── models/
+│   ├── ct2/                   faster-whisper large-v3 — used by the CUDA and CPU runtimes
+│   └── ov/                    OpenVINO int8 large-v3 — used by the NPU and iGPU runtimes
+├── cache/                     compiled kernels (NPU / iGPU paths)
+└── transcripts/               only when the folder holding the source file is read-only
+```
+
+The transcript for `clip.mp3` is written beside it as `clip.txt`.
+
 ## Requirements
 
 - Windows 10/11
