@@ -68,6 +68,10 @@ _drop_stray_pycache()
 PRIORITY = ["cuda", "npu", "igpu", "cpu"]
 RUNTIME_MODEL = {"cuda": "ct2", "cpu": "ct2", "npu": "ov", "igpu": "ov"}
 
+# NPU 失败后用哪套编译器重编一次（DRIVER = 驱动侧编译器，PLUGIN = 插件
+# 自带）。产出的 blob 驱动认哪个取决于两者版本，切换就是改这一行。
+NPU_RETRY_COMPILER = "DRIVER"
+
 # 解码参数：Whisper 在短句/韵律重复处易陷入"重复循环幻觉"。实测 large-v3
 # 在 Aphantasia 音频上 cuda fp16 出 "They're not." ×5、cpu int8 出
 # "Those were the images." ×4（两种精度都中招，与量化无关）。关掉跨段
@@ -151,10 +155,18 @@ _TR = {
         "[setup] Dependencies missing/broken, reinstalling ...",
     "[ERROR] 重试仍失败: %s":
         "[ERROR] Retry still failed: %s",
-    "退回 CPU 重试...":
-        "Falling back to CPU ...",
-    "[ERROR] CPU 也失败: %s":
-        "[ERROR] CPU fallback also failed: %s",
+    "换 NPU 编译器（%s）重新编译并重试 ...":
+        "NPU failed; retrying with the %s compiler (recompiles) ...",
+    "[ERROR] 换编译器后仍失败: %s":
+        "[ERROR] Still failing after switching the compiler: %s",
+    "退回 %s：先下载它用的模型 ...":
+        "Falling back to %s: downloading its model first ...",
+    "[ERROR] 模型下载失败，%s 不可用。":
+        "[ERROR] Model download failed; %s is not available.",
+    "退回 %s 重试...":
+        "Falling back to %s ...",
+    "[ERROR] %s 也失败: %s":
+        "[ERROR] %s also failed: %s",
     "[setup] 检查 {} 方案依赖 ...":
         "[setup] Checking dependencies for the {} runtime ...",
     "[setup] 依赖正常，无需修复。":
@@ -1027,12 +1039,16 @@ def _run_ct2(device, ctype, path):
     return " ".join(texts)
 
 
-def _run_ov(ov_device, path):
+def _run_ov(ov_device, path, compiler=None):
     import openvino_genai
     from faster_whisper.audio import decode_audio
     # 编译缓存按设备分目录（cache/npu、cache/igpu）。首次编译后存入，
     # 之后秒级导入；blob 与硬件绑定，不匹配时 OV 自动重编译一次。
     cache_dir = OV_CACHE_DIR[ov_device]
+    if compiler:
+        # 换编译器重试必须换缓存目录：同一目录里那份被设备拒收的 blob
+        # 会被命中，重试等于没试。
+        cache_dir = cache_dir + "-" + compiler.lower()
     os.makedirs(cache_dir, exist_ok=True)
     if not glob.glob(os.path.join(cache_dir, "*.blob")):
         if ov_device == "NPU":
@@ -1041,13 +1057,20 @@ def _run_ov(ov_device, path):
             print(tr("（首次使用需编译内核，约 5-30 分钟；之后秒级加载）"))
         else:
             print(tr("（首次使用需编译内核，几十秒；结果会缓存）"))
-    pipe = _MODELS.get(("ov", ov_device))
+    pipe = _MODELS.get(("ov", ov_device, compiler))
     if pipe is None:
         print(tr("加载模型（%s, int8）...") % ov_device)
         t0 = time.time()
+        cfg = {"CACHE_DIR": cache_dir}
+        if compiler:
+            # 编译器由驱动侧提供还是插件自带，决定产出的 blob 驱动认不
+            # 认；属性 + 环境变量都设（插件在进程内可能已初始化过，属性
+            # 这条更可靠）。
+            cfg["NPU_COMPILER_TYPE"] = compiler
+            os.environ["NPU_COMPILER_TYPE"] = compiler
         pipe = openvino_genai.WhisperPipeline(
-            OV_DIR, device=ov_device, config={"CACHE_DIR": cache_dir})
-        _MODELS[("ov", ov_device)] = pipe
+            OV_DIR, device=ov_device, config=cfg)
+        _MODELS[("ov", ov_device, compiler)] = pipe
         print(tr("模型加载 %.1fs") % (time.time() - t0))
 
     audio = decode_audio(path, sampling_rate=16000)
@@ -1063,6 +1086,17 @@ def _run_ov(ov_device, path):
     print(tr("转写完成"))
     print(tr("转写用时 %.1fs") % (time.time() - t0))
     return " ".join(texts)
+
+
+def _fallback_order(rt):
+    """失败后的退回顺序：同一份模型的另一套设备优先（npu 与 igpu 共用
+    ov 模型，退回去不用重新下载模型），最后才是 CPU（ct2 模型可能没下
+    过，得先下）。cpu 没有再可退的。"""
+    if rt == "npu":
+        return ["igpu", "cpu"]
+    if rt in ("cuda", "igpu"):
+        return ["cpu"]
+    return []
 
 
 def transcribe(path):
@@ -1093,7 +1127,7 @@ def transcribe(path):
     except Exception as e:
         # 模型加载/运行失败。先区分"依赖坏了"（venv 被外来工具重盖、
         # 安装中断等）：import 检查只在这里才做，坏了就强制重装并
-        # 原路重试一次；否则按设备问题退回 CPU。
+        # 原路重试一次；否则按设备问题依次退回（见 _fallback_order）。
         print("[ERROR] %s" % e)
         if not _import_ok(_imports_for(rt)):
             print(tr("[setup] 依赖缺失/损坏，重新安装 ..."))
@@ -1102,12 +1136,34 @@ def transcribe(path):
                     text = _once()
                 except Exception as e2:
                     print(tr("[ERROR] 重试仍失败: %s") % e2)
-        if text is None:
-            print(tr("退回 CPU 重试..."))
+        # NPU 特有：编译/执行被驱动拒（blob 不认）时，换另一套 NPU 编译器
+        # 重编一次——插件编译器和驱动编译器产出的 blob，驱动认哪个不一样。
+        if text is None and rt == "npu":
+            print(tr("换 NPU 编译器（%s）重新编译并重试 ..."
+                     ) % NPU_RETRY_COMPILER)
             try:
-                text = _run_ct2("cpu", "int8", path)
+                text = _run_ov("NPU", path, compiler=NPU_RETRY_COMPILER)
             except Exception as e2:
-                print(tr("[ERROR] CPU 也失败: %s") % e2)
+                print(tr("[ERROR] 换编译器后仍失败: %s") % e2)
+
+        if text is None:
+            for alt in _fallback_order(rt):
+                kind = RUNTIME_MODEL[alt]
+                if alt in ("npu", "igpu") and not probe()[alt]:
+                    continue
+                if kind not in models_present():
+                    print(tr("退回 %s：先下载它用的模型 ...") % alt)
+                    if not download_model(kind):
+                        print(tr("[ERROR] 模型下载失败，%s 不可用。") % alt)
+                        continue
+                print(tr("退回 %s 重试...") % alt)
+                try:
+                    text = (_run_ov("GPU", path) if alt == "igpu"
+                            else _run_ct2("cpu", "int8", path))
+                    break
+                except Exception as e2:
+                    print(tr("[ERROR] %s 也失败: %s") % (alt, e2))
+            if text is None:
                 return 1
 
     out_real = _write_text_robust(path, out_txt, text)
