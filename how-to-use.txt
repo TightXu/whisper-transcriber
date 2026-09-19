@@ -7,9 +7,15 @@ HOW TO USE / 怎么用
   1. 解压整个文件夹，放哪儿都行（桌面最简单）。
   2. 双击 whisper_transcribe.bat。
   3. 第一次运行要准备环境并下载语音模型（2–3GB，只有第一次慢，窗口里会显示进度）；之后启动只要几秒。
-  4. 黑窗口出现后，把音频/视频文件拖进去（或粘贴路径），回车。
-  5. 转写结果是跟源文件同目录、同名的 .txt。可以接着拖下一个文件，模型不会重新加载。
-  /x 退出；/s 换用哪套硬件方案（显卡 / NPU / 核显 / 纯 CPU）。
+  4. 窗口打开后，把音频/视频文件拖进去（也可以点"浏览"选文件，或把路径粘进输入框回车）。
+     一次放多个文件也行：它们会排队，一个接一个转写，模型只加载一次。
+  5. 转写结果是跟源文件同目录、同名的 .txt，窗口里会给出完整路径；想集中存到别处，可以在设置里改"转写默认保存位置"。
+  关掉窗口就结束（它背后那个控制台窗口是总开关）。
+
+想用命令行模式？
+  启动时按任意键（窗口还在加载的那一两秒内），或者加参数启动：
+    whisper_transcribe.bat --cli          或      whisper_transcribe.bat no-gui
+  两种模式共用同一份环境、模型、缓存和设置。命令行下：/x 退出；/s 换硬件方案。
 
 Windows 不让运行怎么办
   从网上下载的文件，Windows 会拦一道。按顺序试，第 1 条通常就够了：
@@ -23,7 +29,8 @@ Windows 不让运行怎么办
 
 English
   What it does: turns an audio or video file into a plain .txt transcript. Double-click to run — no AI background, no command line, no format conversion.
-  How to run: unzip the folder anywhere -> double-click whisper_transcribe.bat -> the first run prepares everything and downloads the speech model (2-3 GB, one time) -> drag an audio/video file into the black window and press Enter. The transcript is saved next to the source file under the same name, and the model stays loaded for the next file. /x quits, /s switches which hardware does the work.
+  How to run: unzip the folder anywhere -> double-click whisper_transcribe.bat -> the first run prepares everything and downloads the speech model (2-3 GB, one time) -> drag audio/video files into the window (or click Browse, or paste a path and press Enter). Several files at once are fine: they queue up, transcribe one after another, and the model is loaded only once. The transcript is saved next to the source file under the same name and the window shows the exact path; the transcript location can be changed in the settings. Closing the window ends the session (the console behind it is the off switch).
+  Prefer the console: press any key while the window is loading, or start with --cli / no-gui. Both modes share the same environment, models, cache and settings. At the prompt: /x quits, /s switches which hardware does the work.
   If Windows blocks it (files from the internet are held back once), try in this order — the first one usually works:
   1. Start it from a command prompt: type cmd in the Explorer address bar, press Enter, then type whisper_transcribe.bat and press Enter. Nothing is blocked, and it runs with your normal permissions.
   2. When double-clicking, if a warning appears, pick More info -> Run anyway.

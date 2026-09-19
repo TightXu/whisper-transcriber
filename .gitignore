@@ -4,6 +4,7 @@ models/
 cache/
 transcripts/
 whisper.7z
+logs/
 
 # Python bytecode
 __pycache__/

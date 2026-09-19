@@ -2,15 +2,20 @@
 chcp 65001 >nul
 setlocal
 rem ============================================================
-rem  Single launcher. All logic lives in whisper_transcribe.py.
-rem    Double-click            -> interactive prompt
-rem    bat "file.mp3"          -> transcribe directly
+rem  Single launcher (GUI edition). All core logic lives in
+rem  whisper_transcribe.py; the window layer is whisper_gui.py.
+rem    Double-click            -> GUI window + this console (host)
+rem    bat "file.mp3"          -> GUI opens with the file queued
+rem    bat --cli [files]       -> original console mode
+rem  This console window is the off switch: closing it (or the
+rem  GUI window) stops the service. No detached processes.
+rem  Keep this file pure ASCII: chcp 65001 + non-ASCII comments
+rem  make cmd re-read the file with misaligned byte offsets.
 rem ============================================================
 set "PROG_DIR=%~dp0"
 set "PYEXE=%PROG_DIR%.venv\Scripts\python.exe"
 set "SCRIPT=%PROG_DIR%whisper_transcribe.py"
-rem  Keep this file pure ASCII: chcp 65001 + non-ASCII comments make
-rem  cmd re-read the file with misaligned byte offsets (garbled parsing).
+set "GUISCRIPT=%PROG_DIR%whisper_gui.py"
 rem  All bytecode caches go into .venv\pycache via PYTHONPYCACHEPREFIX.
 set "PYTHONPYCACHEPREFIX=%PROG_DIR%.venv\pycache"
 
@@ -110,7 +115,7 @@ if %PIPTRY%==1 set "PIPIDX=%PIP1%"
 if %PIPTRY%==2 set "PIPIDX=%PIP2%"
 if %PIPTRY%==3 set "PIPIDX=%PIP3%"
 echo [setup] Installing dependencies (attempt %PIPTRY%/3) ...
-"%PYEXE%" -m pip install --progress-bar on %PIPIDX% faster-whisper ctranslate2 openvino openvino-genai
+"%PYEXE%" -m pip install --progress-bar on %PIPIDX% faster-whisper ctranslate2 openvino openvino-genai pywebview
 if not errorlevel 1 goto :run
 if %PIPTRY% LSS 3 goto :pipnext
 echo [setup] Dependency install failed after 3 attempts.
@@ -123,7 +128,34 @@ ping -n 4 127.0.0.1 >nul
 goto :pipinst
 
 :run
-"%PYEXE%" "%SCRIPT%" %*
+rem ---- Explicit console mode (--cli, or no-gui) --------------------
+rem  Routed through whisper_gui.py, which strips the flag before
+rem  handing over to core.main(). A shift here would NOT work: cmd
+rem  expands %1..%9 while parsing the if-block, before shift
+rem  executes, so the flag would leak to core as a filename.
+if /i "%~1"=="--cli" (
+    "%PYEXE%" "%GUISCRIPT%" %*
+    goto :end
+)
+if /i "%~1"=="no-gui" (
+    "%PYEXE%" "%GUISCRIPT%" %*
+    goto :end
+)
+rem ---- GUI mode, hosted in THIS console window --------------------
+rem      The window is the off switch: closing this console (or the
+rem      GUI window) stops the service. No detached processes.
+"%PYEXE%" -c "import webview" >nul 2>nul
+if errorlevel 1 (
+    echo [setup] Installing GUI dependencies ^(pywebview^) ...
+    "%PYEXE%" -m pip install --progress-bar on pywebview
+    if errorlevel 1 (
+        echo [setup] pywebview install failed - starting console mode instead.
+        "%PYEXE%" "%SCRIPT%" %*
+        goto :end
+    )
+)
+echo [setup] Starting GUI ... closing this window stops it.
+"%PYEXE%" "%GUISCRIPT%" %*
 goto :end
 
 :nopy
@@ -178,9 +210,12 @@ for %%P in ("%LocalAppData%\Programs\Python\Python311\python.exe" "C:\Python311\
 exit /b 1
 
 rem ---- strip the "downloaded from the internet" mark (Mark-of-the-Web).
-rem      Runs on every start; prints a line only when it cleared something. ----
+rem      Runs on every start; prints a line only when it cleared something.
+rem      -Depth 1: everything the ZIP delivers sits at the top level, and
+rem      going deeper would walk thousands of .venv files on every start
+rem      for nothing. ----
 :unblockmotw
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$c=0; Get-ChildItem -LiteralPath '%~dp0.' -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object { if ((Get-Item -LiteralPath $_.FullName -Stream * -ErrorAction SilentlyContinue).Stream -contains 'Zone.Identifier') { Unblock-File -LiteralPath $_.FullName -ErrorAction SilentlyContinue; $c++ } }; if ($c -gt 0) { Write-Output ('[setup] Cleared network-origin marks on ' + $c + ' file(s).') }" 2>nul
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$c=0; Get-ChildItem -LiteralPath '%~dp0.' -Recurse -Depth 1 -Force -ErrorAction SilentlyContinue | ForEach-Object { if ((Get-Item -LiteralPath $_.FullName -Stream * -ErrorAction SilentlyContinue).Stream -contains 'Zone.Identifier') { Unblock-File -LiteralPath $_.FullName -ErrorAction SilentlyContinue; $c++ } }; if ($c -gt 0) { Write-Output ('[setup] Cleared network-origin marks on ' + $c + ' file(s).') }" 2>nul
 exit /b 0
 
 

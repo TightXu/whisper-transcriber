@@ -1005,19 +1005,27 @@ def _write_text_robust(path, desired_out, text):
 
 # 已加载的模型实例（ct2/ov × 设备 缓存）：交互会话连转多个文件、bat
 # 批量直转时，免去每个文件 ~5-10s 的重复加载。/s 切换 runtime 时清空，
-# 旧实例占用的显存/内存随引用释放。
+# 旧实例占用的显存/内存随引用释放。并发转写时可能有多个线程同时
+# 要建模型：建实例放进锁内双检，避免各建一份白占显存/内存。
 _MODELS = {}
+_MODELS_LOCK = threading.Lock()
+
 
 
 def _run_ct2(device, ctype, path):
     from faster_whisper import WhisperModel
-    model = _MODELS.get(("ct2", device, ctype))
+    key = ("ct2", device, ctype)
+    model = _MODELS.get(key)
     if model is None:
-        print(tr("加载模型 ..."))
-        t0 = time.time()
-        model = WhisperModel(CT2_DIR, device=device, compute_type=ctype)
-        _MODELS[("ct2", device, ctype)] = model
-        print(tr("模型加载 %.1fs") % (time.time() - t0))
+        with _MODELS_LOCK:
+            model = _MODELS.get(key)
+            if model is None:
+                print(tr("加载模型 ..."))
+                t0 = time.time()
+                model = WhisperModel(CT2_DIR, device=device,
+                                     compute_type=ctype)
+                _MODELS[key] = model
+                print(tr("模型加载 %.1fs") % (time.time() - t0))
 
     from faster_whisper.audio import decode_audio
     audio = decode_audio(path, sampling_rate=16000)
@@ -1057,21 +1065,25 @@ def _run_ov(ov_device, path, compiler=None):
             print(tr("（首次使用需编译内核，约 5-30 分钟；之后秒级加载）"))
         else:
             print(tr("（首次使用需编译内核，几十秒；结果会缓存）"))
-    pipe = _MODELS.get(("ov", ov_device, compiler))
+    key = ("ov", ov_device, compiler)
+    pipe = _MODELS.get(key)
     if pipe is None:
-        print(tr("加载模型（%s, int8）...") % ov_device)
-        t0 = time.time()
-        cfg = {"CACHE_DIR": cache_dir}
-        if compiler:
-            # 编译器由驱动侧提供还是插件自带，决定产出的 blob 驱动认不
-            # 认；属性 + 环境变量都设（插件在进程内可能已初始化过，属性
-            # 这条更可靠）。
-            cfg["NPU_COMPILER_TYPE"] = compiler
-            os.environ["NPU_COMPILER_TYPE"] = compiler
-        pipe = openvino_genai.WhisperPipeline(
-            OV_DIR, device=ov_device, config=cfg)
-        _MODELS[("ov", ov_device, compiler)] = pipe
-        print(tr("模型加载 %.1fs") % (time.time() - t0))
+        with _MODELS_LOCK:      # 并发转写时避免重复构建同一条管线
+            pipe = _MODELS.get(key)
+            if pipe is None:
+                print(tr("加载模型（%s, int8）...") % ov_device)
+                t0 = time.time()
+                cfg = {"CACHE_DIR": cache_dir}
+                if compiler:
+                    # 编译器由驱动侧提供还是插件自带，决定产出的 blob
+                    # 驱动认不认；属性 + 环境变量都设（插件在进程内可能
+                    # 已初始化过，属性这条更可靠）。
+                    cfg["NPU_COMPILER_TYPE"] = compiler
+                    os.environ["NPU_COMPILER_TYPE"] = compiler
+                pipe = openvino_genai.WhisperPipeline(
+                    OV_DIR, device=ov_device, config=cfg)
+                _MODELS[key] = pipe
+                print(tr("模型加载 %.1fs") % (time.time() - t0))
 
     audio = decode_audio(path, sampling_rate=16000)
     print(tr("音频时长 %.1f 秒") % (audio.shape[0] / 16000.0))
