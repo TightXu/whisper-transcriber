@@ -250,10 +250,6 @@ _TR = {
         "choosing CUDA auto-installs them.",
     "默认使用推荐方案 ...":
         "Using the recommended option ...",
-    "[setup] 预加载当前方案（%s）的模型 ...":
-        "[setup] Preloading the model for the current runtime (%s) ...",
-    "[setup] 预加载未成功（转写时会重试）。":
-        "[setup] Preload did not succeed (transcription will retry).",
     "[setup] 完成。当前 runtime: %s":
         "[setup] Done. Current runtime: %s",
     "        以后双击 bat 直接粘贴文件即可；/s 可随时调整 runtime。":
@@ -275,8 +271,6 @@ _TR = {
         "[hint] Source dir not writable (%s), saved to: %s",
     "加载模型 ...":
         "Loading model ...",
-    "加载模型（%s, int8）...":
-        "Loading model (int8 on %s) ...",
     "模型加载 %.1fs":
         "Model loaded in %.1fs",
     "音频时长 %.1f 秒":
@@ -1016,22 +1010,67 @@ _MODELS_LOCK = threading.Lock()
 
 
 
-def _get_ct2(device, ctype):
-    """只负责拿到（必要时构建）CT2 模型实例；转写与启动预加载共用。"""
-    from faster_whisper import WhisperModel
-    key = ("ct2", device, ctype)
+# 模型加载的"报账"信息：key -> {"t": 用时秒, "reported": 是否已如实报过,
+# "hint": 首次编译之类的提醒}。启动预加载走静默（quiet=True），只记时间
+# 不打印；等真正转写要用它时，_report_load 再补报"加载模型 ... / 模型
+# 加载 X.Xs"——既不打扰用户，也不会显得模型不需要加载。
+_LOAD_INFO = {}
+
+
+def _report_load(info):
+    """正式转写第一次用到（可能是静默预加载好的）模型时如实补报。"""
+    if not info.get("t") or info.get("reported"):
+        return
+    info["reported"] = True
+    if info.get("hint") and not info.get("hint_shown"):
+        print(info["hint"])
+    print(tr("加载模型 ..."))
+    print(tr("模型加载 %.1fs") % info["t"])
+
+
+def _ensure_model(key, build, quiet=False):
+    """拿到 key 对应的模型：有就返回，没有就构建。
+    quiet=True（启动预加载）：全程不打印，只记下真实用时；
+    quiet=False（正式转写）：打印"加载模型 ..."，构建完报用时；若模型
+    已被静默预加载好，则在这里补报一次。
+    两个线程同时要它时，_MODELS_LOCK 保证只构建一份。
+    """
+    info = _LOAD_INFO.setdefault(key, {})
     model = _MODELS.get(key)
-    if model is None:
-        with _MODELS_LOCK:      # 预加载与转写线程可能同时要它
-            model = _MODELS.get(key)
-            if model is None:
-                print(tr("加载模型 ..."))
-                t0 = time.time()
-                model = WhisperModel(CT2_DIR, device=device,
-                                     compute_type=ctype)
-                _MODELS[key] = model
-                print(tr("模型加载 %.1fs") % (time.time() - t0))
-    return model
+    if model is not None:
+        if not quiet:
+            _report_load(info)
+        return model
+    announced = False
+    if not quiet:
+        if info.get("hint"):
+            print(info["hint"])
+            info["hint_shown"] = True
+        print(tr("加载模型 ..."))
+        announced = True
+    with _MODELS_LOCK:
+        model = _MODELS.get(key)
+        if model is None:
+            t0 = time.time()
+            model = build()
+            _MODELS[key] = model
+            info["t"] = time.time() - t0
+        if quiet:
+            return model
+        if not announced:
+            print(tr("加载模型 ..."))
+        info["reported"] = True
+        print(tr("模型加载 %.1fs") % info["t"])
+        return model
+
+
+def _get_ct2(device, ctype, quiet=False):
+    """拿到（必要时构建）CT2 模型实例；转写与启动预加载共用。"""
+    from faster_whisper import WhisperModel
+    return _ensure_model(
+        ("ct2", device, ctype),
+        lambda: WhisperModel(CT2_DIR, device=device, compute_type=ctype),
+        quiet=quiet)
 
 
 def _run_ct2(device, ctype, path):
@@ -1057,7 +1096,7 @@ def _run_ct2(device, ctype, path):
     return " ".join(texts)
 
 
-def _get_ov(ov_device, compiler=None):
+def _get_ov(ov_device, compiler=None, quiet=False):
     """只负责拿到（必要时构建）该设备的 OpenVINO 管线；转写与启动
     预加载共用。"""
     import openvino_genai
@@ -1070,32 +1109,26 @@ def _get_ov(ov_device, compiler=None):
         cache_dir = cache_dir + "-" + compiler.lower()
     os.makedirs(cache_dir, exist_ok=True)
     key = ("ov", ov_device, compiler)
-    pipe = _MODELS.get(key)
-    if pipe is None:
-        with _MODELS_LOCK:      # 预加载与转写线程可能同时要它
-            pipe = _MODELS.get(key)
-            if pipe is None:
-                if not glob.glob(os.path.join(cache_dir, "*.blob")):
-                    if ov_device == "NPU":
-                        # 实测 int8 本地编译（约 5 分钟）通常快于下载
-                        # 4.3GB，故不做网络下载，直接本地编译。
-                        print(tr("（首次使用需编译内核，约 5-30 分钟；之后秒级加载）"))
-                    else:
-                        print(tr("（首次使用需编译内核，几十秒；结果会缓存）"))
-                print(tr("加载模型（%s, int8）...") % ov_device)
-                t0 = time.time()
-                cfg = {"CACHE_DIR": cache_dir}
-                if compiler:
-                    # 编译器由驱动侧提供还是插件自带，决定产出的 blob
-                    # 驱动认不认；属性 + 环境变量都设（插件在进程内可能
-                    # 已初始化过，属性这条更可靠）。
-                    cfg["NPU_COMPILER_TYPE"] = compiler
-                    os.environ["NPU_COMPILER_TYPE"] = compiler
-                pipe = openvino_genai.WhisperPipeline(
-                    OV_DIR, device=ov_device, config=cfg)
-                _MODELS[key] = pipe
-                print(tr("模型加载 %.1fs") % (time.time() - t0))
-    return pipe
+    info = _LOAD_INFO.setdefault(key, {})
+    if not glob.glob(os.path.join(cache_dir, "*.blob")):
+        # 首次要编译：这条提醒留给"正式转写"那颗线程打（见 _ensure_model），
+        # 预加载阶段不出声。
+        info["hint"] = (tr("（首次使用需编译内核，约 5-30 分钟；之后秒级加载）")
+                        if ov_device == "NPU" else
+                        tr("（首次使用需编译内核，几十秒；结果会缓存）"))
+
+    def _build():
+        cfg = {"CACHE_DIR": cache_dir}
+        if compiler:
+            # 编译器由驱动侧提供还是插件自带，决定产出的 blob 驱动认不
+            # 认；属性 + 环境变量都设（插件在进程内可能已初始化过，属性
+            # 这条更可靠）。
+            cfg["NPU_COMPILER_TYPE"] = compiler
+            os.environ["NPU_COMPILER_TYPE"] = compiler
+        return openvino_genai.WhisperPipeline(
+            OV_DIR, device=ov_device, config=cfg)
+
+    return _ensure_model(key, _build, quiet=quiet)
 
 
 def _run_ov(ov_device, path, compiler=None):
@@ -1120,11 +1153,14 @@ def _run_ov(ov_device, path, compiler=None):
 def preload_model(state=None):
     """启动（或切换方案）后在后台把当前 runtime 的模型加载好：用户
     粘进路径时直接开转，省掉"粘完再等加载"的那几秒。
-    - 只加载，不碰音频；与转写共用 _get_ct2/_get_ov，_MODELS_LOCK
-      保证两边不会重复构建。
+    - **全程静默**：不打印任何东西（用户不必猜"它怎么自己开始加载了"）；
+      用时被 _LOAD_INFO 记下来，等真正转写时由 _report_load 如实补报
+      "加载模型 ... / 模型加载 X.Xs"。
+    - 只加载，不碰音频；与转写共用 _ensure_model，_MODELS_LOCK 保证
+      两边不会重复构建（用户在加载期间就粘路径也只会等这一次）。
     - 模型还没下过 / 缺 CUDA 运行库（首次选 cuda 会先装 1.3GB）：
       跳过——那是首次配置流程的事。
-    - 失败只提示不抛：真正转写时还会再走一次，并带完整退回阶梯。
+    - 失败静默：真正转写时会再走一次，并带完整退回阶梯。
     """
     if state is None:
         state = load_state()
@@ -1137,18 +1173,16 @@ def preload_model(state=None):
     if rt == "cuda" and not p["cuda_libs"]:
         return False
     try:
-        print(tr("[setup] 预加载当前方案（%s）的模型 ...") % rt)
         if rt == "cuda":
-            _get_ct2("cuda", "float16")
+            _get_ct2("cuda", "float16", quiet=True)
         elif rt == "cpu":
-            _get_ct2("cpu", "int8")
+            _get_ct2("cpu", "int8", quiet=True)
         elif rt == "npu":
-            _get_ov("NPU")
+            _get_ov("NPU", quiet=True)
         else:
-            _get_ov("GPU")
+            _get_ov("GPU", quiet=True)
         return True
     except Exception:
-        print(tr("[setup] 预加载未成功（转写时会重试）。"))
         return False
 
 
