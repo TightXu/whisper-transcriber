@@ -16,6 +16,11 @@ HOW TO USE / 怎么用
   启动时按任意键（窗口还在加载的那一两秒内），或者加参数启动：
     whisper_transcribe.bat --cli          或      whisper_transcribe.bat no-gui
   两种模式共用同一份环境、模型、缓存和设置。命令行下：/x 退出；/s 换硬件方案。
+  一行里可以粘多个路径（空格隔开；路径里有空格就加引号），会依次转写。
+
+关于等待时间
+  启动后它会先把当前方案的模型预热好（第一次要几秒到几分钟，取决于方案、是否编译过），
+  所以你把路径粘进去就能直接开转。切换方案后也会自动预热新那套。
 
 Windows 不让运行怎么办
   从网上下载的文件，Windows 会拦一道。按顺序试，第 1 条通常就够了：
@@ -30,7 +35,8 @@ Windows 不让运行怎么办
 English
   What it does: turns an audio or video file into a plain .txt transcript. Double-click to run — no AI background, no command line, no format conversion.
   How to run: unzip the folder anywhere -> double-click whisper_transcribe.bat -> the first run prepares everything and downloads the speech model (2-3 GB, one time) -> drag audio/video files into the window (or click Browse, or paste a path and press Enter). Several files at once are fine: they queue up, transcribe one after another, and the model is loaded only once. The transcript is saved next to the source file under the same name and the window shows the exact path; the transcript location can be changed in the settings. Closing the window ends the session (the console behind it is the off switch).
-  Prefer the console: press any key while the window is loading, or start with --cli / no-gui. Both modes share the same environment, models, cache and settings. At the prompt: /x quits, /s switches which hardware does the work.
+  Prefer the console: press any key while the window is loading, or start with --cli / no-gui. Both modes share the same environment, models, cache and settings. At the prompt: /x quits, /s switches which hardware does the work. Several paths can be pasted at once (space-separated; quote paths that contain spaces) and are transcribed in turn.
+  On waiting: the model for the current runtime is preloaded at startup (seconds, or minutes the first time for a runtime that still needs compiling), so pasting a path starts the transcription right away; switching runtime preloads the new one too.
   If Windows blocks it (files from the internet are held back once), try in this order — the first one usually works:
   1. Start it from a command prompt: type cmd in the Explorer address bar, press Enter, then type whisper_transcribe.bat and press Enter. Nothing is blocked, and it runs with your normal permissions.
   2. When double-clicking, if a warning appears, pick More info -> Run anyway.

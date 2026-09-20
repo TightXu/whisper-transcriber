@@ -19,6 +19,7 @@ whisper_gui.py — Whisper Transcriber 图形界面（pywebview + WebView2）
 用法：
   whisper_transcribe.bat            → 本 GUI（bat 引导环境后拉起；窗口加载
                                       期间按任意键可取消，改走命令行模式）
+                                      启动后会后台预加载当前方案的模型
   whisper_transcribe.bat --cli      → 命令行交互（no-gui 同义）
   whisper_transcribe.bat "a.mp3"    → GUI 打开并把文件入队
   whisper_gui.py --selftest [文件]  → 无窗口自检（打印 status JSON）
@@ -121,6 +122,8 @@ _I18N = {
                          "[setup] Loading the window interface ... press any key to cancel and use the console"),
     "log.guicancel":    ("[setup] 已取消，改用命令行模式。",
                          "[setup] Cancelled; using the console instead."),
+    "log.guifail":      ("[setup] 窗口界面启动失败，改用命令行模式（详情见上）。",
+                         "[setup] The window interface failed to start; using the console instead (details above)."),
     "log.outdir.moved": ("[gui] 已按默认保存位置存放: %s",
                          "[gui] Saved to the default location: %s"),
     "log.outdir.movefail": ("[gui] 移动到默认保存位置失败，文本留在原位:",
@@ -471,6 +474,9 @@ def _op_choose_runtime(op):
     ui_set(busy=None, download=None, runtime=rt, view="main")
     log(core.tr("[setup] Runtime 已设为 %s") % rt)
     refresh_runtime_info(background=True)
+    # 换过就预加载新方案：拖着文件进来时直接开转
+    threading.Thread(target=core.preload_model, args=(state,),
+                     daemon=True).start()
     _flush_pending_files()
 
 
@@ -1422,6 +1428,11 @@ def gui_main():
 
     threading.Thread(target=worker, daemon=True).start()
     refresh_runtime_info(background=True)
+    if UI["view"] == "main":
+        # 启动即预加载当前方案的模型（首次配置流程里由 _op_choose_runtime
+        # 负责）；用户拖进文件时就不用再等加载。
+        threading.Thread(target=core.preload_model,
+                         args=(core.load_state(),), daemon=True).start()
 
     import webview
     api = Api()
@@ -1443,7 +1454,14 @@ def gui_main():
     threading.Thread(target=_watch_cancel, args=(window,),
                      daemon=True).start()
 
-    webview.start()
+    try:
+        webview.start()
+    except Exception:
+        # 窗口起不来（缺 WebView2 运行时、被策略拦住等）：退回命令行，
+        # 别让整个工具就此结束。
+        print(g("log.guifail"), flush=True)
+        print(traceback.format_exc(), flush=True)
+        return core.main()
     if _CANCELLED["yes"]:      # 用户按了键：这里才转命令行模式
         _CANCELLED["yes"] = False
         print(g("log.guicancel"), flush=True)

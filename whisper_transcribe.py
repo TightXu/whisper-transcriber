@@ -250,6 +250,10 @@ _TR = {
         "choosing CUDA auto-installs them.",
     "默认使用推荐方案 ...":
         "Using the recommended option ...",
+    "[setup] 预加载当前方案（%s）的模型 ...":
+        "[setup] Preloading the model for the current runtime (%s) ...",
+    "[setup] 预加载未成功（转写时会重试）。":
+        "[setup] Preload did not succeed (transcription will retry).",
     "[setup] 完成。当前 runtime: %s":
         "[setup] Done. Current runtime: %s",
     "        以后双击 bat 直接粘贴文件即可；/s 可随时调整 runtime。":
@@ -1012,12 +1016,13 @@ _MODELS_LOCK = threading.Lock()
 
 
 
-def _run_ct2(device, ctype, path):
+def _get_ct2(device, ctype):
+    """只负责拿到（必要时构建）CT2 模型实例；转写与启动预加载共用。"""
     from faster_whisper import WhisperModel
     key = ("ct2", device, ctype)
     model = _MODELS.get(key)
     if model is None:
-        with _MODELS_LOCK:
+        with _MODELS_LOCK:      # 预加载与转写线程可能同时要它
             model = _MODELS.get(key)
             if model is None:
                 print(tr("加载模型 ..."))
@@ -1026,6 +1031,11 @@ def _run_ct2(device, ctype, path):
                                      compute_type=ctype)
                 _MODELS[key] = model
                 print(tr("模型加载 %.1fs") % (time.time() - t0))
+    return model
+
+
+def _run_ct2(device, ctype, path):
+    model = _get_ct2(device, ctype)
 
     from faster_whisper.audio import decode_audio
     audio = decode_audio(path, sampling_rate=16000)
@@ -1047,9 +1057,10 @@ def _run_ct2(device, ctype, path):
     return " ".join(texts)
 
 
-def _run_ov(ov_device, path, compiler=None):
+def _get_ov(ov_device, compiler=None):
+    """只负责拿到（必要时构建）该设备的 OpenVINO 管线；转写与启动
+    预加载共用。"""
     import openvino_genai
-    from faster_whisper.audio import decode_audio
     # 编译缓存按设备分目录（cache/npu、cache/igpu）。首次编译后存入，
     # 之后秒级导入；blob 与硬件绑定，不匹配时 OV 自动重编译一次。
     cache_dir = OV_CACHE_DIR[ov_device]
@@ -1058,19 +1069,19 @@ def _run_ov(ov_device, path, compiler=None):
         # 会被命中，重试等于没试。
         cache_dir = cache_dir + "-" + compiler.lower()
     os.makedirs(cache_dir, exist_ok=True)
-    if not glob.glob(os.path.join(cache_dir, "*.blob")):
-        if ov_device == "NPU":
-            # 实测 int8 本地编译（约 5 分钟）通常快于下载 4.3GB，
-            # 故不做网络下载，直接本地编译。
-            print(tr("（首次使用需编译内核，约 5-30 分钟；之后秒级加载）"))
-        else:
-            print(tr("（首次使用需编译内核，几十秒；结果会缓存）"))
     key = ("ov", ov_device, compiler)
     pipe = _MODELS.get(key)
     if pipe is None:
-        with _MODELS_LOCK:      # 并发转写时避免重复构建同一条管线
+        with _MODELS_LOCK:      # 预加载与转写线程可能同时要它
             pipe = _MODELS.get(key)
             if pipe is None:
+                if not glob.glob(os.path.join(cache_dir, "*.blob")):
+                    if ov_device == "NPU":
+                        # 实测 int8 本地编译（约 5 分钟）通常快于下载
+                        # 4.3GB，故不做网络下载，直接本地编译。
+                        print(tr("（首次使用需编译内核，约 5-30 分钟；之后秒级加载）"))
+                    else:
+                        print(tr("（首次使用需编译内核，几十秒；结果会缓存）"))
                 print(tr("加载模型（%s, int8）...") % ov_device)
                 t0 = time.time()
                 cfg = {"CACHE_DIR": cache_dir}
@@ -1084,6 +1095,12 @@ def _run_ov(ov_device, path, compiler=None):
                     OV_DIR, device=ov_device, config=cfg)
                 _MODELS[key] = pipe
                 print(tr("模型加载 %.1fs") % (time.time() - t0))
+    return pipe
+
+
+def _run_ov(ov_device, path, compiler=None):
+    from faster_whisper.audio import decode_audio
+    pipe = _get_ov(ov_device, compiler)
 
     audio = decode_audio(path, sampling_rate=16000)
     print(tr("音频时长 %.1f 秒") % (audio.shape[0] / 16000.0))
@@ -1098,6 +1115,41 @@ def _run_ov(ov_device, path, compiler=None):
     print(tr("转写完成"))
     print(tr("转写用时 %.1fs") % (time.time() - t0))
     return " ".join(texts)
+
+
+def preload_model(state=None):
+    """启动（或切换方案）后在后台把当前 runtime 的模型加载好：用户
+    粘进路径时直接开转，省掉"粘完再等加载"的那几秒。
+    - 只加载，不碰音频；与转写共用 _get_ct2/_get_ov，_MODELS_LOCK
+      保证两边不会重复构建。
+    - 模型还没下过 / 缺 CUDA 运行库（首次选 cuda 会先装 1.3GB）：
+      跳过——那是首次配置流程的事。
+    - 失败只提示不抛：真正转写时还会再走一次，并带完整退回阶梯。
+    """
+    if state is None:
+        state = load_state()
+    rt = state.get("runtime", "cpu")
+    p = probe()
+    if not _rt_enabled(p)[rt]:
+        return False
+    if RUNTIME_MODEL[rt] not in models_present():
+        return False
+    if rt == "cuda" and not p["cuda_libs"]:
+        return False
+    try:
+        print(tr("[setup] 预加载当前方案（%s）的模型 ...") % rt)
+        if rt == "cuda":
+            _get_ct2("cuda", "float16")
+        elif rt == "cpu":
+            _get_ct2("cpu", "int8")
+        elif rt == "npu":
+            _get_ov("NPU")
+        else:
+            _get_ov("GPU")
+        return True
+    except Exception:
+        print(tr("[setup] 预加载未成功（转写时会重试）。"))
+        return False
 
 
 def _fallback_order(rt):
@@ -1197,6 +1249,61 @@ def norm_path(raw):
     return p.strip()
 
 
+_QUOTE_PAIRS = {"\"": "\"", "'": "'", "“": "”", "‘": "’"}
+
+
+def _split_tokens(raw):
+    """引号感知的空白拆分：成对引号内的空白不拆（英文直引号与中文弯引号
+    都认）。引号本身保留，交给 norm_path 成对剥掉。"""
+    out, buf, close_q = [], [], None
+    for ch in raw:
+        if close_q is None and ch in _QUOTE_PAIRS:
+            close_q = _QUOTE_PAIRS[ch]
+            buf.append(ch)
+        elif close_q is not None and ch == close_q:
+            close_q = None
+            buf.append(ch)
+        elif close_q is None and ch.isspace():
+            if buf:
+                out.append("".join(buf))
+                buf = []
+        else:
+            buf.append(ch)
+    if buf:
+        out.append("".join(buf))
+    return out
+
+
+def split_paths(raw):
+    """把一行输入拆成若干路径（一行里粘多个路径也能用）。
+    1) 整行就是个存在的路径 → 就一个（未加引号的空格路径照旧能用）；
+    2) 否则引号感知地按空白拆，再把相邻碎片尽量长地拼回去、看拼出来的
+       东西存不存在——"两个未加引号的空格路径"因此也能正确断句；
+    3) 拼不出来的碎片当独立路径交给转写去报"文件不存在"（不静默丢输入）。
+    """
+    raw = raw.strip()
+    if not raw:
+        return []
+    if os.path.exists(norm_path(raw)):
+        return [norm_path(raw)]
+    toks = _split_tokens(raw)
+    paths, i, n = [], 0, len(toks)
+    while i < n:
+        hit = None
+        for j in range(n, i, -1):        # 尽量长优先，避免把空格路径切断
+            cand = norm_path(" ".join(toks[i:j]))
+            if cand and os.path.exists(cand):
+                hit = (cand, j)
+                break
+        if hit:
+            paths.append(hit[0])
+            i = hit[1]
+        else:
+            paths.append(norm_path(toks[i]))
+            i += 1
+    return paths or [norm_path(raw)]
+
+
 def _bg_dep_check(state):
     """后台依赖校验（interactive_loop 启动时开线程跑）：按配置的
     runtime 只 import 对应引擎（1-3 秒）。正常则无声；失败打印提示，
@@ -1232,6 +1339,9 @@ def interactive_loop(state):
     """省去回车那一步：直接粘贴路径 / 输入 /s。"""
     threading.Thread(target=_bg_dep_check, args=(state,),
                      daemon=True).start()
+    # 启动即预加载当前方案的模型：用户粘路径时直接开转
+    threading.Thread(target=preload_model, args=(state,),
+                     daemon=True).start()
     print("=" * 56)
     print(tr("  粘贴音频/视频文件（支持拖拽）→ 转写"))
     print(tr("  /s → 调整 Runtime      /x → 退出"))
@@ -1249,7 +1359,11 @@ def interactive_loop(state):
             if cmd == "s":
                 if runtime_menu(state) != 0:
                     return 1
-                print(tr("当前 Runtime: %s") % load_state().get("runtime"))
+                _st2 = load_state()
+                print(tr("当前 Runtime: %s") % _st2.get("runtime"))
+                # 换过方案（或没换）都重新预加载一次：没换就是缓存命中
+                threading.Thread(target=preload_model, args=(_st2,),
+                                 daemon=True).start()
                 continue
             elif cmd == "fix":
                 fix_deps()
@@ -1260,9 +1374,11 @@ def interactive_loop(state):
                 print(tr("无效命令: %s（可用: /s 调整Runtime, /fix 修复依赖, "
                         "/x 退出）") % raw)
                 continue
-        rc = transcribe(norm_path(raw))
-        if rc != 0:
-            print(tr("（转写失败，可重试其它文件或 /s 调整 runtime）"))
+        for _i, _p in enumerate(split_paths(raw)):
+            if _i:
+                print("")
+            if transcribe(_p) != 0:
+                print(tr("（转写失败，可重试其它文件或 /s 调整 runtime）"))
 
 
 def main():
