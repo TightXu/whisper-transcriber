@@ -1,12 +1,50 @@
 HOW TO USE / 怎么用
 
+English
+What it does
+  Turns an audio or video file into a plain .txt transcript. Double-click to run — no AI background, no command line, no format conversion.
+
+How to use
+  1. Unzip the whole folder anywhere (the desktop is the simplest place).
+  2. Double-click whisper_transcribe.bat.
+  3. The first run prepares the environment and downloads the speech model (about 1.6-3 GB, depending on which hardware runtime you use;
+     choosing the CUDA runtime also installs the CUDA 12 libraries, about 1.3 GB).
+     If the machine has no Python at all, the launcher downloads and installs Python 3.12 and pulls in the dependencies itself (about 470 MB).
+     Only that first run is slow — the window shows the progress; later starts take a few seconds.
+  4. When the window opens, drag audio/video files into it (or click Browse, or paste a path into the input box and press Enter).
+     Several files at once are fine: they queue up, transcribe one after another, and the model is loaded only once.
+  5. The transcript is a .txt next to the source file, under the same name, and the window shows the full path; to collect transcripts somewhere else,
+     change "Default transcript location" in the settings.
+     Closing the window ends the session (the console window behind it is the master switch).
+
+Console mode
+  Press any key while the window is loading, or start with --cli / no-gui.
+  Both modes share the same environment, models, cache and settings. At the prompt: /x quits, /s switches which hardware does the work, /fix repairs the dependencies.
+  Several paths can be pasted at once (space-separated; quote paths that contain spaces) and are transcribed in turn.
+
+On waiting
+  The model for the current runtime is preloaded at startup (a few seconds, or minutes the first time for a runtime that still needs compiling),
+  so pasting a path starts the transcription right away; switching runtime preloads the new one too. The preload itself stays silent and never blocks you,
+  and the load is still reported honestly — with its real duration — when a file is actually transcribed: the wait is moved earlier, not hidden.
+
+If Windows blocks it
+  Files downloaded from the internet are held back once. Try in this order — the first one usually works:
+  1. Start it from a command prompt: type cmd in the Explorer address bar, press Enter, then type whisper_transcribe.bat and press Enter.
+     Nothing is blocked, and it runs with your normal permissions.
+  2. When double-clicking, if a warning appears, pick More info -> Run anyway.
+  3. If the warning offers no such option (newer Windows 11 with Smart App Control), right-click whisper_transcribe.bat -> Run as administrator.
+  Note: only Windows 11's built-in unzip stamps files as "downloaded from the internet". 7-Zip, WinRAR and WPS do not, so the block above never appears.
+
+中文
 这个工具做什么
   把音频或视频文件转成纯文本 .txt。双击就能用：不需要 AI 背景，不需要敲命令，常见格式直接拖进去，不用自己转格式。
 
 怎么用
   1. 解压整个文件夹，放哪儿都行（桌面最简单）。
   2. 双击 whisper_transcribe.bat。
-  3. 第一次运行要准备环境并下载语音模型（2–3GB，只有第一次慢，窗口里会显示进度）；之后启动只要几秒。
+  3. 第一次运行要准备环境并下载语音模型（约 1.6–3 GB，看用哪个硬件方案；选 CUDA 方案时还会自动装 CUDA 12 运行库，约 1.3 GB）。
+     如果这台机器上完全没有 Python，启动器会自己下载安装 Python 3.12 并把依赖补齐（约 470 MB）。
+     只有第一次慢，窗口里会显示进度；之后启动只要几秒。
   4. 窗口打开后，把音频/视频文件拖进去（也可以点"浏览"选文件，或把路径粘进输入框回车）。
      一次放多个文件也行：它们会排队，一个接一个转写，模型只加载一次。
   5. 转写结果是跟源文件同目录、同名的 .txt，窗口里会给出完整路径；想集中存到别处，可以在设置里改"转写默认保存位置"。
@@ -15,7 +53,7 @@ HOW TO USE / 怎么用
 想用命令行模式？
   启动时按任意键（窗口还在加载的那一两秒内），或者加参数启动：
     whisper_transcribe.bat --cli          或      whisper_transcribe.bat no-gui
-  两种模式共用同一份环境、模型、缓存和设置。命令行下：/x 退出；/s 换硬件方案。
+  两种模式共用同一份环境、模型、缓存和设置。命令行下：/x 退出；/s 换硬件方案；/fix 修复依赖。
   一行里可以粘多个路径（空格隔开；路径里有空格就加引号），会依次转写。
 
 关于等待时间
@@ -32,15 +70,3 @@ Windows 不让运行怎么办
   3. 如果弹窗里没有"仍要运行"（较新的 Windows 11 开了智能应用控制 Smart App Control）：
      右键 whisper_transcribe.bat → 以管理员身份运行。
   附：这个"来自网络"标记只有 Windows 11 自带的解压会给文件带上。用 7-Zip、WinRAR、WPS 解压都不会带，也就不会出现上面的拦截。
-
-
-English
-  What it does: turns an audio or video file into a plain .txt transcript. Double-click to run — no AI background, no command line, no format conversion.
-  How to run: unzip the folder anywhere -> double-click whisper_transcribe.bat -> the first run prepares everything and downloads the speech model (2-3 GB, one time) -> drag audio/video files into the window (or click Browse, or paste a path and press Enter). Several files at once are fine: they queue up, transcribe one after another, and the model is loaded only once. The transcript is saved next to the source file under the same name and the window shows the exact path; the transcript location can be changed in the settings. Closing the window ends the session (the console behind it is the off switch).
-  Prefer the console: press any key while the window is loading, or start with --cli / no-gui. Both modes share the same environment, models, cache and settings. At the prompt: /x quits, /s switches which hardware does the work. Several paths can be pasted at once (space-separated; quote paths that contain spaces) and are transcribed in turn.
-  On waiting: the model for the current runtime is preloaded at startup (seconds, or minutes the first time for a runtime that still needs compiling), so pasting a path starts the transcription right away; switching runtime preloads the new one too. The preload itself stays silent and never blocks you, and the load is still reported honestly — with its real duration — when a file is actually transcribed: the wait is moved earlier, not hidden.
-  If Windows blocks it (files from the internet are held back once), try in this order — the first one usually works:
-  1. Start it from a command prompt: type cmd in the Explorer address bar, press Enter, then type whisper_transcribe.bat and press Enter. Nothing is blocked, and it runs with your normal permissions.
-  2. When double-clicking, if a warning appears, pick More info -> Run anyway.
-  3. If the warning offers no such option (newer Windows 11 with Smart App Control), right-click whisper_transcribe.bat -> Run as administrator.
-  Note: only Windows 11's built-in unzip stamps files as "downloaded from the internet". 7-Zip, WinRAR and WPS do not, so the block above never appears.
