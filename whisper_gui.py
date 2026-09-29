@@ -379,7 +379,7 @@ def download_model_inproc(kind, log=print):
     else:
         repo, dst = "OpenVINO/whisper-large-v3-int8-ov", core.OV_DIR
     log(core.tr("[setup] 使用 HF 端点: %s") % ep)
-    log(core.tr("[setup] 下载 %s -> models/%s（约 1.6~3GB）...")
+    log(core.tr("[setup] 下载 %s -> models/%s（约 1.6–3 GB）...")
         % (repo, os.path.basename(dst)))
     try:
         from huggingface_hub import snapshot_download
@@ -495,8 +495,8 @@ def _op_drain(op):
             if nxt is None:
                 # 去重标志与"查无待转"同临界区复位：此刻新入队的文件
                 # 要么已被上面的 next() 看到，要么 post_drain 会看到
-                # False 而补发 op —— 两条路都不丢文件（原先复位在
-                # 循环外单独加锁，间隙里入队的文件会被去重掉且无兜底）。
+                # False 而补发 op —— 两条路都不丢文件。复位若放在循环
+                # 外单独加锁，间隙里入队的文件会被去重掉且无兜底。
                 _OP_PEND["drain"] = False
                 break
         path = nxt["path"]
@@ -758,9 +758,9 @@ def _bind_drop():
     """把拖放处理绑到当前 #drop 元素。由前端 renderMain() 每次重建
     拖放区后经 api.bind_drop() 触发 —— 元素每次都是新建的，不会叠加
     重复监听；也覆盖了"首跑向导 → 主界面"重建 DOM 后旧绑定失效的
-    场景（早期版本在 loaded 里只绑一次，首跑后拖放就是死的）。
+    场景：拖放区随主界面一起重建，绑定只做一次的话会随旧元素一起失效。
     在 js_api 线程里执行；loaded 回调线程里禁止碰 DOM —— 渲染器
-    未就绪时会死锁 UI 线程（见 README 技术要点）。"""
+    未就绪时会死锁 UI 线程。"""
     if window is None:
         return
     try:
@@ -1247,7 +1247,8 @@ function poll(){
 
 /* ---------- 启动 ----------
    必须等 pywebviewready：页面脚本执行时桥多半还没注入，
-   直接调 pywebview.api.* 会全部失败（曾表现为"整个界面点了没反应"）。 */
+   此时直接调 pywebview.api.* 会全部失败，每个调用都被 catch 吞掉，
+   界面因此毫无响应。 */
 var _booted=false;
 function boot(){
   if(_booted)return; _booted=true;
@@ -1279,9 +1280,9 @@ _REEXEC_FLAG = "WT_GUI_REEXEC"
 def _in_venv():
     """当前解释器是否已是 venv 的解释器。
     core.VENV_PY 固定是 python.exe，而 GUI 由 bat 用 pythonw.exe 拉起 ——
-    必须按"所在目录 + 主名"比较；整串比较会让 pythonw 永远被判"不在
-    venv"而反复重启自己（2026-09-16 曾因此产生数千 pythonw 进程的事故，
-    此函数就是那条防线，改动前先想清楚）。"""
+    必须按"所在目录 + 主名"比较：整串比较会把 pythonw 永远判成"不在
+    venv"，而调用方据此换解释器重启自己，于是无限自重启。这个判定就是
+    那道防线，改动前先想清楚。"""
     exe = os.path.abspath(sys.executable)
     vdir = os.path.dirname(os.path.abspath(core.VENV_PY)).lower()
     stem = os.path.splitext(os.path.basename(exe))[0].lower()

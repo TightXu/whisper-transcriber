@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-whisper_transcribe.py — 音频/视频 一键转文字（自包含版，v3 重构）
+whisper_transcribe.py — 音频/视频 一键转文字（自包含版）
 
 模型目录 models/ 下两种格式，对应不同 runtime：
   ct2/  (CTranslate2, Systran/faster-whisper-large-v3)  → CUDA / CPU
@@ -188,8 +188,8 @@ _TR = {
     # ---- 模型下载 ----
     "[setup] 使用 HF 端点: %s":
         "[setup] Using HF endpoint: %s",
-    "[setup] 下载 %s -> models/%s（约 1.6~3GB）...":
-        "[setup] Downloading %s -> models/%s (~1.6-3GB) ...",
+    "[setup] 下载 %s -> models/%s（约 1.6–3 GB）...":
+        "[setup] Downloading %s -> models/%s (~1.6–3 GB) ...",
     "[ERROR] 模型下载失败。":
         "[ERROR] Model download failed.",
     "[setup] 下载完成。":
@@ -698,7 +698,7 @@ def download_model(kind):
         repo, dst = "Systran/faster-whisper-large-v3", CT2_DIR
     else:
         repo, dst = "OpenVINO/whisper-large-v3-int8-ov", OV_DIR
-    print(tr("[setup] 下载 %s -> models/%s（约 1.6~3GB）...")
+    print(tr("[setup] 下载 %s -> models/%s（约 1.6–3 GB）...")
           % (repo, os.path.basename(dst)))
     code = ("from huggingface_hub import snapshot_download;"
             "snapshot_download(%r, local_dir=%r)" % (repo, dst))

@@ -2,15 +2,15 @@ HOW TO USE / 怎么用
 
 English
 What it does
-  Turns an audio or video file into a plain .txt transcript. Double-click to run — no AI background, no command line, no format conversion.
+  Turns an audio or video file into a plain .txt transcript. Double-click to run: no AI background, no command line, no format conversion.
 
 How to use
   1. Unzip the whole folder anywhere (the desktop is the simplest place).
   2. Double-click whisper_transcribe.bat.
-  3. The first run prepares the environment and downloads the speech model (about 1.6-3 GB, depending on which hardware runtime you use;
+  3. The first run prepares the environment and downloads the speech model (1.6–3 GB, depending on which hardware runtime you use;
      choosing the CUDA runtime also installs the CUDA 12 libraries, about 1.3 GB).
      If the machine has no Python at all, the launcher downloads and installs Python 3.12 and pulls in the dependencies itself (about 470 MB).
-     Only that first run is slow — the window shows the progress; later starts take a few seconds.
+     Only that first run is slow (the window shows the progress); later starts take a few seconds.
   4. When the window opens, drag audio/video files into it (or click Browse, or paste a path into the input box and press Enter).
      Several files at once are fine: they queue up, transcribe one after another, and the model is loaded only once.
   5. The transcript is a .txt next to the source file, under the same name, and the window shows the full path; to collect transcripts somewhere else,
@@ -25,10 +25,10 @@ Console mode
 On waiting
   The model for the current runtime is preloaded at startup (a few seconds, or minutes the first time for a runtime that still needs compiling),
   so pasting a path starts the transcription right away; switching runtime preloads the new one too. The preload itself stays silent and never blocks you,
-  and the load is still reported honestly — with its real duration — when a file is actually transcribed: the wait is moved earlier, not hidden.
+  and the load is still reported with its real duration when a file is actually transcribed, so the waiting happens early in the run instead of when you ask for a transcript.
 
 If Windows blocks it
-  Files downloaded from the internet are held back once. Try in this order — the first one usually works:
+  Files downloaded from the internet are held back once. Try in this order; the first one usually works:
   1. Start it from a command prompt: type cmd in the Explorer address bar, press Enter, then type whisper_transcribe.bat and press Enter.
      Nothing is blocked, and it runs with your normal permissions.
   2. When double-clicking, if a warning appears, pick More info -> Run anyway.
@@ -60,11 +60,11 @@ If Windows blocks it
   启动后它会先把当前方案的模型预热好（第一次要几秒到几分钟，取决于方案、是否编译过），
   所以你把路径粘进去就能直接开转；切换方案后也会自动预热新那套。
   预热本身不出提示、也不会挡住你操作；等你真要转写时，它会照实报出
-  "加载模型 ... / 模型加载 3.3s"——等于把等待挪到了前面，而不是假装没有等待。
+  "加载模型 ... / 模型加载 3.3s"，等于把等待挪到了前面，而不是假装没有等待。
 
 Windows 不让运行怎么办
   从网上下载的文件，Windows 会拦一道。按顺序试，第 1 条通常就够了：
-  1. 从命令提示符启动 —— 不触发拦截，而且用你的普通权限运行，最干净：
+  1. 从命令提示符启动，不触发拦截，而且用你的普通权限运行，最干净：
      在文件夹的地址栏里输入 cmd 回车，再输入 whisper_transcribe.bat 回车。
   2. 双击时如果弹出"无法识别的应用"，点 更多信息 (More info) → 仍要运行 (Run anyway)。
   3. 如果弹窗里没有"仍要运行"（较新的 Windows 11 开了智能应用控制 Smart App Control）：
