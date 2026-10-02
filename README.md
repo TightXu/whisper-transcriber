@@ -1,5 +1,7 @@
 # whisper-transcriber
 
+> 30-second version: [TLDR.md](TLDR.md)
+
 A one-click local transcription tool for Windows. Drop the folder anywhere, double-click, drop in an audio or video file, and you get plain text back. No installer, no commands to type, no Python setup, and no AI background needed: everything from building the environment to choosing which hardware runs the model is handled for you. The window is the default face of the tool; a console mode is one flag away for anyone who prefers it.
 
 ## What this repository is
@@ -129,3 +131,17 @@ The model cache is what makes a batch cheap: the second file skips loading entir
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Start here
+
+A Windows transcription tool: three files, no installer; double-click, drop in a file, get a .txt transcript back.
+
+1. [README.md](README.md#engineering-notes): what the repo builds around Whisper large-v3, four runtimes with fallbacks and self-provisioning (the NPU's first compile measured 5.5 minutes; about 6.3 seconds cached).
+2. [README.md](README.md#performance): the speed table (0.16x real time on CUDA, a 7.6-second clip; one laptop, Core Ultra 7 and RTX 5070M).
+3. [whisper_gui.py](whisper_gui.py): the window layer (`import whisper_transcribe as core` at line 41: one core, two front ends).
+
+Check it yourself: download the three files, double-click whisper_transcribe.bat, drop in an mp3, get the .txt next to it (steps: how-to-use.txt).
+
+Limits: Windows only; numbers are single-machine, self-reported; files transcribe one at a time (parallel measured no faster on CUDA).
+
+Summary: [TLDR.md](TLDR.md).

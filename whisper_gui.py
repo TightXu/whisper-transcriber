@@ -39,6 +39,8 @@ LOGS_DIR = os.path.join(SCRIPT_DIR, "logs")
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 import whisper_transcribe as core   # noqa: E402  (同目录副本，字节级同源)
+# English gloss: the window layer. One core, two front ends; this file imports
+# whisper_transcribe.py unmodified (the module docstring above is in Chinese by design).
 
 
 # ================================================================ i18n
