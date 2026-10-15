@@ -146,6 +146,21 @@ rem      The window is the off switch: closing this console (or the
 rem      GUI window) stops the service. No detached processes.
 "%PYEXE%" -c "import webview" >nul 2>nul
 if errorlevel 1 (
+    rem  A .venv carried over from another machine may have no pip at all
+    rem  (uv builds venvs without it). Without the bootstrap below, the
+    rem  install fails and the launcher silently drops to console mode -
+    rem  the GUI just never appears and nothing says why.
+    "%PYEXE%" -m pip --version >nul 2>nul
+    if errorlevel 1 (
+        echo [setup] No pip in this .venv ^(uv-built venvs have none^), bootstrapping ...
+        "%PYEXE%" -m ensurepip --upgrade >nul 2>nul
+        "%PYEXE%" -m pip --version >nul 2>nul
+        if errorlevel 1 (
+            echo [setup] Could not bootstrap pip in this .venv.
+            echo   Either run:  "%PYEXE%" -m ensurepip --upgrade
+            echo   Or delete the .venv folder and double-click this file again.
+        )
+    )
     echo [setup] Installing GUI dependencies ^(pywebview^) ...
     "%PYEXE%" -m pip install --progress-bar on pywebview
     if errorlevel 1 (
